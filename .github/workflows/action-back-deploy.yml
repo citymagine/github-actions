@@ -1,21 +1,21 @@
 # .github/workflows/action-back-deploy.yml
 name: Deploy
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       release-tag:
         description: docker tag of the release to deploy
         type: string
-        required: false
+        required: true
+      appname:
+        description: "Name of the app. Used in URL"
+        type: string
+        required: true
       environment:
         default: dev
         description: "Which environment would you like to deploy on ?"
         required: true
-        type: choice
-        options:
-          - prod
-          - uat
-          - dev
+        type: string
 
 jobs:
   deployment:
@@ -23,54 +23,54 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'Insert dev domain'
-        if: github.event.inputs.environment == 'dev'
+        if: inputs.environment == 'dev'
         run: |
-          echo "url=domain-api-dev.citymagine.biz" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}-dev.citymagine.biz" >> $GITHUB_ENV
           echo "citymapurl=citymap-dev.citymagine.biz" >> $GITHUB_ENV
           echo "citymapperurl=citymapper-dev.citymagine.biz" >> $GITHUB_ENV
           echo "citydesignerurl=citydesigner-dev.citymagine.biz" >> $GITHUB_ENV
           echo "cityroadurl=cityroad-dev.citymagine.biz" >> $GITHUB_ENV
       - name: 'Insert uat domain'
-        if: github.event.inputs.environment == 'uat'
+        if: inputs.environment == 'uat'
         run: |
-          echo "url=domain-api-uat.citymagine.net" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}-uat.citymagine.net" >> $GITHUB_ENV
           echo "citymapurl=citymap-uat.citymagine.net" >> $GITHUB_ENV
           echo "citymapperurl=citymapper-uat.citymagine.net" >> $GITHUB_ENV
           echo "citydesignerurl=citydesigner-uat.citymagine.net" >> $GITHUB_ENV
           echo "cityroadurl=cityroad-uat.citymagine.net" >> $GITHUB_ENV
       - name: 'Insert demo domain'
-        if: github.event.inputs.environment == 'demo'
+        if: inputs.environment == 'demo'
         run: |
-          echo "url=domain-api-demo.citymagine.com" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}-demo.citymagine.com" >> $GITHUB_ENV
           echo "citymapurl=citymap-demo.citymagine.com" >> $GITHUB_ENV
           echo "citymapperurl=citymapper-demo.citymagine.com" >> $GITHUB_ENV
           echo "citydesignerurl=citydesigner-demo.citymagine.com" >> $GITHUB_ENV
           echo "cityroadurl=cityroad-demo.citymagine.com" >> $GITHUB_ENV
       - name: 'Insert prod domain'
-        if: github.event.inputs.environment == 'prod'
+        if: inputs.environment == 'prod'
         run: |
-          echo "url=domain-api.citymagine.com" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}.citymagine.com" >> $GITHUB_ENV
           echo "citymapurl=citymap.citymagine.com" >> $GITHUB_ENV
           echo "citymapperurl=citymapper.citymagine.com" >> $GITHUB_ENV
           echo "citydesignerurl=citydesigner.citymagine.com" >> $GITHUB_ENV
           echo "cityroadurl=cityroad.citymagine.com" >> $GITHUB_ENV
       - name: 'Deploy'
         uses: glopezep/helm@v1.7.1
-        if: github.event.inputs.environment != 'prod'
+        if: inputs.environment != 'prod'
         with:
-          release: 'domain-api'
-          namespace: '${{github.event.inputs.environment}}'
-          chart: './deployment/domain'
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
+          chart: './deployment/helm'
           token: '${{ github.token }}'
-          value-files: "./deployment/domain/values.yaml"
-          version: ${{ github.event.inputs.release-tag }}
+          value-files: "./deployment/helm/values.yaml"
+          version: ${{ inputs.release-tag }}
           values: |
             {
                 "image": {
-                    "tag": "${{ github.event.inputs.release-tag }}"
+                    "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "domain-api-${{github.event.inputs.environment}}-environment",
-                "environmentSecretName": "domain-api-${{github.event.inputs.environment}}-secret",
+                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
+                "environmentSecretName": "${{inputs.appname}}-${{inputs.environment}}-secret",
                 "dbPasswordDev":"${{ secrets.DB_PASSWORD_DEV }}",
                 "dbPasswordUat":"${{ secrets.DB_PASSWORD_UAT }}",
                 "dbPasswordDemo":"${{ secrets.DB_PASSWORD_DEMO }}",
@@ -96,21 +96,21 @@ jobs:
           KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
       - name: 'Deploy on production'
         uses: glopezep/helm@v1.7.1
-        if: github.event.inputs.environment == 'prod'
+        if: inputs.environment == 'prod'
         with:
-          release: 'domain-api'
-          namespace: '${{github.event.inputs.environment}}'
-          chart: './deployment/domain'
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
+          chart: './deployment/helm'
           token: '${{ github.token }}'
-          value-files: "./deployment/domain/values.yaml"
-          version: ${{ github.event.inputs.release-tag }}
+          value-files: "./deployment/helm/values.yaml"
+          version: ${{ inputs.release-tag }}
           values: |
             {
                 "image": {
-                    "tag": "${{ github.event.inputs.release-tag }}"
+                    "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "domain-api-${{github.event.inputs.environment}}-environment",
-                "environmentSecretName": "domain-api-${{github.event.inputs.environment}}-secret",
+                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
+                "environmentSecretName": "${{inputs.appname}}-${{inputs.environment}}-secret",
                 "dbPasswordProd":"${{ secrets.DB_PASSWORD_PROD }}",
                 "ingress": {
                     "hosts": [{

@@ -1,21 +1,20 @@
 # .github/workflows/action-front-deploy.yml
 name: Deploy
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       release-tag:
         description: docker tag of the release to deploy
         type: string
         required: false
       environment:
-        default: dev
         description: "Which environment would you like to deploy on ?"
         required: true
-        type: choice
-        options:
-          - dev
-          - uat
-          - prod
+        type: string
+      appname:
+        description: "Name of the app. Used in URL"
+        type: string
+        required: true
 
 jobs:
   deployment:
@@ -23,33 +22,33 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'Insert dev domain'
-        if: github.event.inputs.environment == 'dev'
+        if: inputs.environment == 'dev'
         run: |
-          echo "url=elements-dev.citymagine.biz" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}-dev.citymagine.biz" >> $GITHUB_ENV
       - name: 'Insert uat domain'
-        if: github.event.inputs.environment == 'uat'
+        if: inputs.environment == 'uat'
         run: |
-          echo "url=elements-uat.citymagine.net" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}-uat.citymagine.net" >> $GITHUB_ENV
       - name: 'Insert prod domain'
-        if: github.event.inputs.environment == 'prod'
+        if: inputs.environment == 'prod'
         run: |
-          echo "url=elements.citymagine.com" >> $GITHUB_ENV
+          echo "url=${{inputs.appname}}.citymagine.com" >> $GITHUB_ENV
       - name: 'Deploy'
         uses: glopezep/helm@v1.7.1
-        if: github.event.inputs.environment != 'prod'
+        if: inputs.environment != 'prod'
         with:
-          release: 'elements'
-          namespace: '${{github.event.inputs.environment}}'
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
           chart: './deployment/helm'
           token: '${{ github.token }}'
           value-files: "./deployment/helm/values.yaml"
-          version: ${{ github.event.inputs.release-tag }}
+          version: ${{ inputs.release-tag }}
           values: |
             {
                 "image": {
-                    "tag": "${{ github.event.inputs.release-tag }}"
+                    "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "elements-${{github.event.inputs.environment}}-environment",
+                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
                 "ingress": {
                     "hosts": [{
                         "host": "${{env.url}}"
@@ -61,20 +60,20 @@ jobs:
           KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
       - name: 'Deploy on prod'
         uses: glopezep/helm@v1.7.1
-        if: github.event.inputs.environment == 'prod'
+        if: inputs.environment == 'prod'
         with:
-          release: 'elements'
-          namespace: '${{github.event.inputs.environment}}'
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
           chart: './deployment/helm'
           token: '${{ github.token }}'
           value-files: "./deployment/helm/values.yaml"
-          version: ${{ github.event.inputs.release-tag }}
+          version: ${{ inputs.release-tag }}
           values: |
             {
                 "image": {
-                    "tag": "${{ github.event.inputs.release-tag }}"
+                    "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "elements-${{github.event.inputs.environment}}-environment",
+                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
                 "ingress": {
                     "hosts": [{
                         "host": "${{env.url}}"
