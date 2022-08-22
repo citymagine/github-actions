@@ -1,0 +1,32 @@
+name: Build dev
+on:
+  pull_request:
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{secrets.PAT}}
+      - uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+      - name: Build & push the Docker image for dev
+        if: github.ref != 'refs/heads/master'
+        run: |
+          ./mvnw -B --no-transfer-progress clean compile test package

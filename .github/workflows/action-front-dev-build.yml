@@ -1,0 +1,29 @@
+name: Build & push dev image
+
+on:
+  pull_request:
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push the Docker image for dev
+        if: github.ref != 'refs/heads/master'
+        run: |
+          PACKAGE_VERSION=$(cat package.json|grep version|head -1|awk -F: '{ print $2 }'|sed 's/[\", ]//g')
+          docker build . -f Dockerfile -t ${{ env.REGISTRY }}/${{env.IMAGE_NAME}}:$PACKAGE_VERSION-dev
+          docker push ${{ env.REGISTRY }}/${{env.IMAGE_NAME}}:$PACKAGE_VERSION-dev

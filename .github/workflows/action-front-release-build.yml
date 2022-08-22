@@ -1,0 +1,31 @@
+name: Build release image
+
+on:
+  push:
+    tags:
+       - "**"
+
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: |
+          PACKAGE_VERSION=$(cat package.json|grep version|head -1|awk -F: '{ print $2 }'|sed 's/[\", ]//g')
+          docker build . --file Dockerfile --tag ${{ env.REGISTRY }}/${{env.IMAGE_NAME}}:$PACKAGE_VERSION
+          docker push ${{ env.REGISTRY }}/${{env.IMAGE_NAME}}:$PACKAGE_VERSION
