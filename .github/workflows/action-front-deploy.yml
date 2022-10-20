@@ -21,21 +21,9 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v1
-      - name: 'Insert dev domain'
-        if: inputs.environment == 'dev'
-        run: |
-          echo "url=${{inputs.appname}}-dev.citymagine.biz" >> $GITHUB_ENV
-      - name: 'Insert uat domain'
-        if: inputs.environment == 'uat'
-        run: |
-          echo "url=${{inputs.appname}}-uat.citymagine.net" >> $GITHUB_ENV
-      - name: 'Insert prod domain'
-        if: inputs.environment == 'prod'
-        run: |
-          echo "url=${{inputs.appname}}.citymagine.com" >> $GITHUB_ENV
-      - name: 'Deploy'
+      - name: 'Deploy on dev'
         uses: glopezep/helm@v1.7.1
-        if: inputs.environment != 'prod'
+        if: inputs.environment == 'dev'
         with:
           release: '${{inputs.appname}}'
           namespace: '${{inputs.environment}}'
@@ -48,16 +36,31 @@ jobs:
                 "image": {
                     "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
-                "ingress": {
-                    "hosts": [{
-                        "host": "${{env.url}}"
-                    }]
-                }
+                ${{secrets.DEV_VALUES}}
             }
           helm: "helm3"
         env:
           KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
+      - name: 'Deploy on devAws'
+        uses: glopezep/helm@v1.7.1
+        if: inputs.environment == 'devAws'
+        with:
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
+          chart: './deployment/helm'
+          token: '${{ github.token }}'
+          value-files: "./deployment/helm/values.yaml"
+          version: ${{ inputs.release-tag }}
+          values: |
+            {
+                "image": {
+                    "tag": "${{ inputs.release-tag }}"
+                },
+                ${{secrets.DEV_AWS_VALUES}}
+            }
+          helm: "helm3"
+        env:
+          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG_DEV_AWS }}'
       - name: 'Deploy on prod'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
@@ -73,11 +76,7 @@ jobs:
                 "image": {
                     "tag": "${{ inputs.release-tag }}"
                 },
-                "environmentConfigMapName": "${{inputs.appname}}-${{inputs.environment}}-environment",
-                "ingress": {
-                    "hosts": [{
-                        "host": "${{env.url}}"
-                    }]
+                ${{secrets.PROD_VALUES}}
                 }
             }
           helm: "helm3"

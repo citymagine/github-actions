@@ -45,3 +45,34 @@ For frontend workflow, we rely on a `Dockerfile` placed in the root folder of th
   }
 }
 ```
+
+### Secret values template
+
+```json
+                "env": "dev",
+                "namespace": "dev",
+                "database": {
+                  "host":""
+                  "name":"",
+                  "user":"",
+                  "password":"",
+                  "schema":""
+                },     
+                "ingress": {
+                    "hosts": [{
+                        "host": "${{env.url}}"
+                    }],
+                    "cors": [{
+                        "host": "http://localhost:4200"
+                    },{
+                        "host": "https://${{env.citymapurl}}"
+                    },{
+                        "host": "https://${{env.citymapperurl}}"
+                    },{
+                        "host": "https://${{env.citydesignerurl}}"
+                    },{
+                        "host": "https://${{env.cityroadurl}}"
+                    }]
+                }
+
+```
