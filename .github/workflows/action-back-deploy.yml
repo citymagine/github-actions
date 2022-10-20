@@ -61,7 +61,7 @@ jobs:
             }
           helm: "helm3"
         env:
-          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
+          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG_DEV_AWS }}'
       - name: 'Deploy on production'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
