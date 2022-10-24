@@ -43,25 +43,18 @@ jobs:
         env:
           KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
       - name: 'Deploy on devAws'
-        uses: glopezep/helm@v1.7.1
+        uses: peymanmortazavi/eks-helm-deploy@v2.2.1
         if: inputs.environment == 'devAws'
         with:
-          release: '${{inputs.appname}}'
-          namespace: '${{inputs.environment}}'
-          chart: './deployment/helm'
-          token: '${{ github.token }}'
-          value-files: "./deployment/helm/values.yaml"
-          version: ${{ inputs.release-tag }}
-          values: |
-            {
-                "image": {
-                    "tag": "${{ inputs.release-tag }}"
-                },
-                ${{secrets.DEV_AWS_VALUES}}
-            }
-          helm: "helm3"
-        env:
-          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG_DEV_AWS }}'
+          name: '${{inputs.appname}}'
+          namespace: dev
+          aws-access-key-id: ${{ secrets.AWS_ACCESS__KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+          cluster-name: sandbox2
+          chart-path: "deployment/helm/"
+          config-files: "./deployment/helm/values.yaml"
+          values: image.tag=${{ inputs.release-tag }},${{secrets.DEV_AWS_VALUES}}
       - name: 'Deploy on production'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
