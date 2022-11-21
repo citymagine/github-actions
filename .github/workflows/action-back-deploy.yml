@@ -21,7 +21,46 @@ jobs:
   deployment:
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: actions/checkout@v1
+      - name: 'Checkout sourcecode'
+        uses: actions/checkout@v1
+      - name: 'Retrieve secrets from Vault'
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          namespace: admin
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/data/devops aws-access-key | AWS_ACCESS_KEY_ID ;
+            secret/data/devops aws-access-secret | AWS_ACCESS_KEY_SECRET ;
+            secret/data/devops kubeconfig_dev | KUBECONFIG_DEV ;
+            secret/data/devops kubeconfig_prod | KUBECONFIG_PROD ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} environment | DEPLOY_ENVIRONMENT ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} namespace | DEPLOY_NAMESPACE ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} adminUserId | ADMIN_USER_ID ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} processingUserId | PROCESSING_USER_ID ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databaseHost | DATABASE_HOST ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databaseLegacySchema | DATABASE_LEGACY_SCHEMA ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databaseName | DATABASE_NAME ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databasePassword | DATABASE_PASSWORD ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databaseSchema | DATABASE_SCHEMA ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} databaseUser | DATABASE_USER ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} deployIngressRoutes | DEPLOY_INGRESS_ROUTES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} deployTraefikRoutes | DEPLOY_TRAEFIK_ROUTES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} generateCertificate | GENERATE_CERTIFICATES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressCorsHost0 | CORS_HOST_0 ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressCorsHost1 | CORS_HOST_1 ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressCorsHost2 | CORS_HOST_2 ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressCorsHost3 | CORS_HOST_3 ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressCorsHost4 | CORS_HOST_4 ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressHost | INGRESS_HOST ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressArn | INGRESS_ARN ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthIssuerUrl | OAUTH_ISSUER_URL ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthClientId | OAUTH_CLIENT_ID ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthClientSecret | OAUTH_CLIENT_SECRET ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} sentryDsn | SENTRY_DSN ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} sentryEnvironment | SENTRY_ENVIRONMENT ;
       - name: 'Deploy on dev'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'dev'
@@ -37,24 +76,58 @@ jobs:
                 "image": {
                     "tag": "${{ inputs.release-tag }}"
                 },
-                ${{secrets.DEV_VALUES}}
+                "environment": "${{ env.DEPLOY_ENVIRONMENT}}",
+                "namespace": "${{ env.DEPLOY_NAMESPACE}}",
+                "database": {
+                  "host":"${{ env.DATABASE_HOST}}",
+                  "name":"${{ env.DATABASE_NAME}}",
+                  "user":"${{ env.DATABASE_USER}}",
+                  "password":"${{ env.DATABASE_PASSWORD}}",
+                  "schema":"${{ env.DATABASE_SCHEMA}}",
+                  "legacySchema":"${{ env.DATABASE_LEGACY_SCHEMA }}"
+                },
+                "adminUserId": ${{ env.ADMIN_USER_ID }},
+                "processingUserId": ${{ env.PROCESSING_USER_ID }},
+                "oauthIssuer":"${{ env.OAUTH_ISSUER_URL }}",
+                "ingress": {
+                  "arn": "${{env.INGRESS_ARN}}",
+                  "hosts": [{
+                    "host": "${{ env.INGRESS_HOST }}"
+                  }],
+                  "cors": [{
+                    "host": "${{ env.CORS_HOST_0 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_1 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_2 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_3 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_4 }}"
+                  }]
+                },
+                "sentry": {
+                  "dsn":"${{ env.SENTRY_DSN}}",
+                  "environment":"${{ env.SENTRY_ENVIRONMENT }}"
+                }
             }
           helm: "helm3"
         env:
-          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
+          KUBECONFIG_FILE: '${{ env.KUBECONFIG_DEV }}'
       - name: 'Deploy on devAws'
         uses: peymanmortazavi/eks-helm-deploy@v2.2.1
         if: inputs.environment == 'devAws'
         with:
           name: '${{inputs.appname}}'
           namespace: dev
-          aws-access-key-id: ${{ secrets.AWS_ACCESS__KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY_SECRET }}
           aws-region: eu-west-3
           cluster-name: sandbox2
           chart-path: "deployment/helm/"
           config-files: "./deployment/helm/values.yaml"
-          values: image.tag=${{ inputs.release-tag }},${{secrets.DEV_AWS_VALUES}}
+          values: |
+            image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},service.type=NodePort,deployIngressRoutes=${{ env.DEPLOY_INGRESS_ROUTES }},deployTraefikRoutes=${{ env.DEPLOY_TRAEFIK_ROUTES }},generateCertificate=${{ env.GENERATE_CERTIFICATES }},database.host=${{ env.DATABASE_HOST }},database.name=${{ env.DATABASE_NAME }},database.user=${{ env.DATABASE_USER }},database.password=${{ env.DATABASE_PASSWORD }},database.schema=${{ env.DATABASE_SCHEMA }},database.legacySchema=${{ env.DATABASE_LEGACY_SCHEMA}},adminUserId=${{ env.ADMIN_USER_ID }},processingUserId=${{ env.PROCESSING_USER_ID }},oauthIssuer=${{ env.OAUTH_ISSUER_URL }},ingress.hosts[0].host=${{ env.INGRESS_HOST }},ingress.cors[0].host=${{ env.CORS_HOST_0 }},ingress.cors[1].host=${{ env.CORS_HOST_1 }},ingress.cors[2].host=${{ env.CORS_HOST_2 }},ingress.cors[3].host=${{ env.CORS_HOST_4 }},ingress.cors[4].host=${{ env.CORS_HOST_4 }},ingress.arn=${{env.INGRESS_ARN}},sentry.dsn=${{ env.SENTRY_DSN }},sentry.environment=${{ env.SENTRY_ENVIRONMENT }}
       - name: 'Deploy on production'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
@@ -70,8 +143,41 @@ jobs:
                 "image": {
                     "tag": "${{ inputs.release-tag }}"
                 },
-                ${{secrets.PROD_VALUES}}
+                "environment": "${{ env.DEPLOY_ENVIRONMENT}}",
+                "namespace": "${{ env.DEPLOY_NAMESPACE}}",
+                "database": {
+                  "host":"${{ env.DATABASE_HOST}}",
+                  "name":"${{ env.DATABASE_NAME}}",
+                  "user":"${{ env.DATABASE_USER}}",
+                  "password":"${{ env.DATABASE_PASSWORD}}",
+                  "schema":"${{ env.DATABASE_SCHEMA}}",
+                  "legacySchema":"${{ env.DATABASE_LEGACY_SCHEMA }}"
+                },
+                "adminUserId": ${{ env.ADMIN_USER_ID }},
+                "processingUserId": ${{ env.PROCESSING_USER_ID }},
+                "oauthIssuer":"${{ env.OAUTH_ISSUER_URL }}",
+                "ingress": {
+                  "arn": "${{env.INGRESS_ARN}}",
+                  "hosts": [{
+                    "host": "${{ env.INGRESS_HOST }}"
+                  }],
+                  "cors": [{
+                    "host": "${{ env.CORS_HOST_0 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_1 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_2 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_3 }}"
+                  },{
+                    "host": "${{ env.CORS_HOST_4 }}"
+                  }]
+                },
+                "sentry": {
+                  "dsn":"${{ env.SENTRY_DSN}}",
+                  "environment":"${{ env.SENTRY_ENVIRONMENT }}"
+                }
             }
           helm: "helm3"
         env:
-          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG_PROD }}'
+          KUBECONFIG_FILE: '${{ env.KUBECONFIG_PROD }}'

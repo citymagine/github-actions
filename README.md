@@ -46,33 +46,31 @@ For frontend workflow, we rely on a `Dockerfile` placed in the root folder of th
 }
 ```
 
-### Secret values template
+### Vault secrets template
 
 ```json
-                "env": "dev",
-                "namespace": "dev",
-                "database": {
-                  "host":""
-                  "name":"",
-                  "user":"",
-                  "password":"",
-                  "schema":""
-                },     
-                "ingress": {
-                    "hosts": [{
-                        "host": "${{env.url}}"
-                    }],
-                    "cors": [{
-                        "host": "http://localhost:4200"
-                    },{
-                        "host": "https://${{env.citymapurl}}"
-                    },{
-                        "host": "https://${{env.citymapperurl}}"
-                    },{
-                        "host": "https://${{env.citydesignerurl}}"
-                    },{
-                        "host": "https://${{env.cityroadurl}}"
-                    }]
-                }
-
+{
+  "adminUserId": 1,
+  "database.host": "dbIP",
+  "database.legacySchema": "public",
+  "database.name": "citymagine_dev",
+  "database.password": "dbPassword",
+  "database.schema": "domain",
+  "database.user": "cityuser-dev",
+  "deployIngressRoutes": "false",
+  "deployTraefikRoutes": "true",
+  "environment": "dev",
+  "generateCertificate": "true",
+  "ingress.cors[0].host": "http://localhost:4200",
+  "ingress.cors[1].host": "https://citymap-dev.citymagine.biz",
+  "ingress.cors[2].host": "https://citymapper-dev.citymagine.biz",
+  "ingress.cors[3].host": "https://citydesigner-dev.citymagine.biz",
+  "ingress.cors[4].host": "https://cityroad-dev.citymagine.biz",
+  "ingress.hosts[0].host": "legacy-api-dev.citymagine.biz",
+  "namespace": "dev",
+  "oauth.issuerUrl": "https://dev-citymagine.eu.auth0.com/",
+  "processingUserId": 3,
+  "sentry.dsn": "sentryURL",
+  "sentry.environment": "development"
+}
 ```
