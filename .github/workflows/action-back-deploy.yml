@@ -61,6 +61,7 @@ jobs:
             secret/data/${{inputs.environment}}/${{inputs.appname}} oauthClientSecret | OAUTH_CLIENT_SECRET ;
             secret/data/${{inputs.environment}}/${{inputs.appname}} sentryDsn | SENTRY_DSN ;
             secret/data/${{inputs.environment}}/${{inputs.appname}} sentryEnvironment | SENTRY_ENVIRONMENT ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} redisUrl | REDIS_URL ;
       - name: 'Deploy on dev'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'dev'
@@ -107,9 +108,12 @@ jobs:
                   }]
                 },
                 "sentry": {
-                  "dsn":"${{ env.SENTRY_DSN}}",
+                  "dsn":"${{ env.SENTRY_DSN }}",
                   "environment":"${{ env.SENTRY_ENVIRONMENT }}"
-                }
+                },
+                "redis": {
+                  "url":"${{ env.REDIS_URL }}",
+                },
             }
           helm: "helm3"
         env:
@@ -127,7 +131,7 @@ jobs:
           chart-path: "deployment/helm/"
           config-files: "./deployment/helm/values.yaml"
           values: |
-            image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},service.type=NodePort,deployIngressRoutes=${{ env.DEPLOY_INGRESS_ROUTES }},deployTraefikRoutes=${{ env.DEPLOY_TRAEFIK_ROUTES }},generateCertificate=${{ env.GENERATE_CERTIFICATES }},database.host=${{ env.DATABASE_HOST }},database.name=${{ env.DATABASE_NAME }},database.user=${{ env.DATABASE_USER }},database.password=${{ env.DATABASE_PASSWORD }},database.schema=${{ env.DATABASE_SCHEMA }},database.legacySchema=${{ env.DATABASE_LEGACY_SCHEMA}},adminUserId=${{ env.ADMIN_USER_ID }},processingUserId=${{ env.PROCESSING_USER_ID }},oauthIssuer=${{ env.OAUTH_ISSUER_URL }},ingress.hosts[0].host=${{ env.INGRESS_HOST }},ingress.cors[0].host=${{ env.CORS_HOST_0 }},ingress.cors[1].host=${{ env.CORS_HOST_1 }},ingress.cors[2].host=${{ env.CORS_HOST_2 }},ingress.cors[3].host=${{ env.CORS_HOST_4 }},ingress.cors[4].host=${{ env.CORS_HOST_4 }},ingress.arn=${{env.INGRESS_ARN}},sentry.dsn=${{ env.SENTRY_DSN }},sentry.environment=${{ env.SENTRY_ENVIRONMENT }}
+            image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},service.type=NodePort,deployIngressRoutes=${{ env.DEPLOY_INGRESS_ROUTES }},deployTraefikRoutes=${{ env.DEPLOY_TRAEFIK_ROUTES }},generateCertificate=${{ env.GENERATE_CERTIFICATES }},database.host=${{ env.DATABASE_HOST }},database.name=${{ env.DATABASE_NAME }},database.user=${{ env.DATABASE_USER }},database.password=${{ env.DATABASE_PASSWORD }},database.schema=${{ env.DATABASE_SCHEMA }},database.legacySchema=${{ env.DATABASE_LEGACY_SCHEMA}},adminUserId=${{ env.ADMIN_USER_ID }},processingUserId=${{ env.PROCESSING_USER_ID }},oauthIssuer=${{ env.OAUTH_ISSUER_URL }},ingress.hosts[0].host=${{ env.INGRESS_HOST }},ingress.cors[0].host=${{ env.CORS_HOST_0 }},ingress.cors[1].host=${{ env.CORS_HOST_1 }},ingress.cors[2].host=${{ env.CORS_HOST_2 }},ingress.cors[3].host=${{ env.CORS_HOST_4 }},ingress.cors[4].host=${{ env.CORS_HOST_4 }},ingress.arn=${{env.INGRESS_ARN}},sentry.dsn=${{ env.SENTRY_DSN }},sentry.environment=${{ env.SENTRY_ENVIRONMENT }},redis.url=${{ env.REDIS_URL }}
       - name: 'Deploy on production'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
