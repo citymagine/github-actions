@@ -180,6 +180,9 @@ jobs:
                 "sentry": {
                   "dsn":"${{ env.SENTRY_DSN}}",
                   "environment":"${{ env.SENTRY_ENVIRONMENT }}"
+                },
+                "redis": {
+                  "url":"${{ env.REDIS_URL }}"
                 }
             }
           helm: "helm3"
