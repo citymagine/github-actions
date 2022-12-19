@@ -42,17 +42,6 @@ jobs:
             secret/data/${{inputs.environment}}/${{inputs.appname}} generateCertificate | GENERATE_CERTIFICATES ;
             secret/data/${{inputs.environment}}/${{inputs.appname}} ingressHost | INGRESS_HOST ;
             secret/data/${{inputs.environment}}/${{inputs.appname}} ingressArn | INGRESS_ARN ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthIssuerUrl | OAUTH_ISSUER_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthClientId | OAUTH_CLIENT_ID ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} oauthClientSecret | OAUTH_CLIENT_SECRET ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} sentryDsn | SENTRY_DSN ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} sentryEnvironment | SENTRY_ENVIRONMENT ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} apiRootUrl | API_ROOT_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} apiDomainUrl | API_DOMAIN_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} apiGeojsonUrl | API_GEOJSON_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} apiTilesUrl | API_TILES_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} mediaUrl | MEDIA_URL ;
-            secret/data/${{inputs.environment}}/${{inputs.appname}} storageUrl | STORAGE_URL ;
       - name: 'Deploy on dev'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'dev'
@@ -78,15 +67,7 @@ jobs:
                 },
                 "deployIngressRoutes":${{env.DEPLOY_INGRESS_ROUTES}},
                 "deployTraefikRoutes":${{env.DEPLOY_TRAEFIK_ROUTES}},
-                "generateCertificate":${{env.GENERATE_CERTIFICATES}},
-                "apiRootUrl":"${{ env.API_ROOT_URL}}",
-                "apiDomainUrl":"${{ env.API_DOMAIN_URL}}",
-                "apiGeojsonUrl":"${{ env.API_GEOJSON_URL}}",
-                "apiTilesUrl":"${{ env.API_TILES_URL}}",
-                "storageUrl":"${{ env.STORAGE_URL}}",
-                "mediaUrl":"${{ env.MEDIA_URL}}",
-                "clientId":"${{env.OAUTH_CLIENT_ID}}",
-                "oauthIssuer":"${{env.OAUTH_ISSUER_URL}}"
+                "generateCertificate":${{env.GENERATE_CERTIFICATES}}
             }
           helm: "helm3"
         env:
@@ -103,7 +84,7 @@ jobs:
           cluster-name: sandbox2
           chart-path: "deployment/helm/"
           config-files: "./deployment/helm/values.yaml"
-          values: image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},deployIngressRoutes=${{env.DEPLOY_INGRESS_ROUTES}},deployTraefikRoutes=${{env.DEPLOY_TRAEFIK_ROUTES}},generateCertificate=${{env.GENERATE_CERTIFICATES}},ingress.hosts[0].host=${{ env.INGRESS_HOST}},ingress.arn=${{env.INGRESS_ARN}},apiRootUrl=${{ env.API_ROOT_URL}},apiDomainUrl=${{ env.API_DOMAIN_URL}},apiTilesUrl=${{ env.API_TILES_URL}},apiGeojsonUrl=${{ env.API_GEOJSON_URL}},storageUrl=${{ env.STORAGE_URL}},mediaUrl=${{ env.MEDIA_URL}},clientId=${{env.OAUTH_CLIENT_ID}},oauthIssuer=${{env.OAUTH_ISSUER_URL}},service.type=NodePort
+          values: image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},deployIngressRoutes=${{env.DEPLOY_INGRESS_ROUTES}},deployTraefikRoutes=${{env.DEPLOY_TRAEFIK_ROUTES}},generateCertificate=${{env.GENERATE_CERTIFICATES}},ingress.hosts[0].host=${{ env.INGRESS_HOST}},ingress.arn=${{env.INGRESS_ARN}},service.type=NodePort
       - name: 'Deploy on prod'
         uses: glopezep/helm@v1.7.1
         if: inputs.environment == 'prod'
@@ -129,15 +110,7 @@ jobs:
                 },
                 "deployIngressRoutes":${{env.DEPLOY_INGRESS_ROUTES}},
                 "deployTraefikRoutes":${{env.DEPLOY_TRAEFIK_ROUTES}},
-                "generateCertificate":${{env.GENERATE_CERTIFICATES}},
-                "apiRootUrl":"${{ env.API_ROOT_URL}}",
-                "apiDomainUrl":"${{ env.API_DOMAIN_URL}}",
-                "apiGeojsonUrl":"${{ env.API_GEOJSON_URL}}",
-                "apiTilesUrl":"${{ env.API_TILES_URL}}",
-                "storageUrl":"${{ env.STORAGE_URL}}",
-                "mediaUrl":"${{ env.MEDIA_URL}}",
-                "clientId":"${{env.OAUTH_CLIENT_ID}}",
-                "oauthIssuer":"${{env.OAUTH_ISSUER_URL}}"
+                "generateCertificate":${{env.GENERATE_CERTIFICATES}}
             }
           helm: "helm3"
         env:
