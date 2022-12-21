@@ -1,0 +1,117 @@
+# .github/workflows/action-front-deploy.yml
+name: Deploy
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: docker tag of the release to deploy
+        type: string
+        required: true
+      environment:
+        description: "Which environment would you like to deploy on ?"
+        required: true
+        type: string
+      appname:
+        description: "Name of the app. Used in URL"
+        type: string
+        required: true
+
+jobs:
+  deployment:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v1
+      - name: "Fetch secrets from vault"
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          namespace: admin
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/data/devops aws-access-key | AWS_ACCESS_KEY_ID ;
+            secret/data/devops aws-access-secret | AWS_ACCESS_KEY_SECRET ;
+            secret/data/devops kubeconfig_dev | KUBECONFIG_DEV ;
+            secret/data/devops kubeconfig_prod | KUBECONFIG_PROD ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} environment | DEPLOY_ENVIRONMENT ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} namespace | DEPLOY_NAMESPACE ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} deployIngressRoutes | DEPLOY_INGRESS_ROUTES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} deployTraefikRoutes | DEPLOY_TRAEFIK_ROUTES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} generateCertificate | GENERATE_CERTIFICATES ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressHost | INGRESS_HOST ;
+            secret/data/${{inputs.environment}}/${{inputs.appname}} ingressArn | INGRESS_ARN ;
+      - name: 'Deploy on dev'
+        uses: glopezep/helm@v1.7.1
+        if: inputs.environment == 'dev'
+        with:
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
+          chart: './deployment/helm'
+          token: '${{ github.token }}'
+          value-files: "./deployment/helm/values.yaml"
+          version: ${{ inputs.release-tag }}
+          values: |
+            {
+                "image": {
+                    "tag": "${{ inputs.release-tag }}"
+                },
+                "environment": "${{ env.DEPLOY_ENVIRONMENT}}",
+                "namespace": "${{ env.DEPLOY_NAMESPACE}}",
+                "ingress": {
+                  "arn": "${{env.INGRESS_ARN}}",
+                  "hosts": [{
+                    "host": "${{ env.INGRESS_HOST}}"
+                  }]
+                },
+                "deployIngressRoutes":${{env.DEPLOY_INGRESS_ROUTES}},
+                "deployTraefikRoutes":${{env.DEPLOY_TRAEFIK_ROUTES}},
+                "generateCertificate":${{env.GENERATE_CERTIFICATES}}
+            }
+          helm: "helm3"
+        env:
+          KUBECONFIG_FILE: '${{ env.KUBECONFIG_DEV }}'
+      - name: 'Deploy on devAws'
+        uses: peymanmortazavi/eks-helm-deploy@v2.2.1
+        if: inputs.environment == 'devAws'
+        with:
+          name: '${{inputs.appname}}'
+          namespace: dev
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_ACCESS_KEY_SECRET }}
+          aws-region: eu-west-3
+          cluster-name: sandbox2
+          chart-path: "deployment/helm/"
+          config-files: "./deployment/helm/values.yaml"
+          values: image.tag=${{ inputs.release-tag }},environment=${{ env.DEPLOY_ENVIRONMENT}},namespace=${{ env.DEPLOY_NAMESPACE}},deployIngressRoutes=${{env.DEPLOY_INGRESS_ROUTES}},deployTraefikRoutes=${{env.DEPLOY_TRAEFIK_ROUTES}},generateCertificate=${{env.GENERATE_CERTIFICATES}},ingress.hosts[0].host=${{ env.INGRESS_HOST}},ingress.arn=${{env.INGRESS_ARN}},service.type=NodePort
+      - name: 'Deploy on prod'
+        uses: glopezep/helm@v1.7.1
+        if: inputs.environment == 'prod'
+        with:
+          release: '${{inputs.appname}}'
+          namespace: '${{inputs.environment}}'
+          chart: './deployment/helm'
+          token: '${{ github.token }}'
+          value-files: "./deployment/helm/values.yaml"
+          version: ${{ inputs.release-tag }}
+          values: |
+            {
+                "image": {
+                    "tag": "${{ inputs.release-tag }}"
+                },
+                "environment": "${{ env.DEPLOY_ENVIRONMENT}}",
+                "namespace": "${{ env.DEPLOY_NAMESPACE}}",
+                "ingress": {
+                  "arn": "${{env.INGRESS_ARN}}",            
+                  "hosts": [{
+                    "host": "${{ env.INGRESS_HOST}}"
+                  }]
+                },
+                "deployIngressRoutes":${{env.DEPLOY_INGRESS_ROUTES}},
+                "deployTraefikRoutes":${{env.DEPLOY_TRAEFIK_ROUTES}},
+                "generateCertificate":${{env.GENERATE_CERTIFICATES}}
+            }
+          helm: "helm3"
+        env:
+          KUBECONFIG_FILE: '${{ env.KUBECONFIG_PROD }}'
