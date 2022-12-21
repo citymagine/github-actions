@@ -1,4 +1,4 @@
-# .github/workflows/action-front-deploy.yml
+# .github/workflows/action-python-crops-api-deploy.yml
 name: Deploy
 on:
   workflow_call:
