@@ -1,0 +1,46 @@
+name: Build-and-push-docker-image-on-docker-hub
+
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  deployment:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v1
+
+      - name: "Fetch secrets from Vault"
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          namespace: admin
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/data/ovh_credentials OS_AUTH_URL | OS-AUTH_URL ;
+            secret/data/ovh_credentials OS_IDENTITY_API_VERSION | OS-IDENTITY-API-VERSION ;
+            secret/data/ovh_credentials OS_INTERFACE | OS-INTERFACE ;
+            secret/data/ovh_credentials OS_PASSWORD | OS-PASSWORD ;
+            secret/data/ovh_credentials OS_PROJECT_ID | O-PROJECT_ID ;
+            secret/data/ovh_credentials OS_PROJECT_NAME | OS-PROJECT-NAME ;
+            secret/data/ovh_credentials OS_REGION_NAME | OS-REGION-NAME ;
+            secret/data/ovh_credentials OS_USERNAME | OS-USERNAME ;
+            secret/data/ovh_credentials OS_USER_DOMAIN_NAME | OS-USER-DOMAIN-NAME ;
+
+      - name: "Login to Docker Hub"
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+      
+      - name: Build & Push the Docker image to Citymagine Dockerhub
+        run: |
+          docker pull citymagineinc/vertical-ai:models
+          docker pull citymagineinc/vertical-ai:frozen_base
+          docker build . -f Dockerfile -t citymagineinc/vertical-ai:prod --build-arg OS-AUTH-URL=${{ env.OS-AUTH-URL }} --build-arg OS-PROJECT-ID=${{ env.OS-PROJECT-ID }} --build-arg OS-PROJECT-NAME=${{ env.OS-PROJECT-NAME }} --build-arg OS-USER_DOMAIN-NAME=${{ env.OS-USER-DOMAIN-NAME }} --build-arg OS-USERNAME=${{ env.OS-USERNAME }} --build-arg OS-PASSWORD=${{ env.OS-PASSWORD }} --build-arg OS-REGION-NAME=${{ env.OS-REGION-NAME }} --build-arg OS-INTERFACE=${{ env.OS-INTERFACE }} --build-arg OS-IDENTITY-API-VERSION=${{ env.OS-IDENTITY-API-VERSION }}
+          docker push citymagineinc/vertical-ai:prod
