@@ -1,7 +1,7 @@
 name: Build-and-push-docker-image-on-docker-hub
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
